@@ -209,6 +209,18 @@ Install required packages:
 
 pip install numpy tqdm
 
+## SUBTLEX-PL file
+
+The `subtlex-pl.csv` file is not included in the repository because it is too large for Git.
+
+Download the SUBTLEX-PL dataset from OSF: https://osf.io/5a76z/
+
+Then place the CSV file in the `embeddings/` folder and name it:
+
+```text
+embeddings/subtlex-pl.csv
+```
+
 ## Usage
 
 Run the default simulation:

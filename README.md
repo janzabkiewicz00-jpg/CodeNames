@@ -49,8 +49,12 @@ The algorithm evaluates all available clue words and keeps the best score found 
 
 ## Project structure
 
+```
 PythonProject/
 ├── embeddings/
+│   ├── subtlex-pl.csv                        (not included, see below)
+│   ├── build_embeddings.py
+│   ├── build_random_embeddings.py
 │   ├── builtin_embeddings.npz
 │   ├── polish_embeddings.npz
 │   ├── builtin_embeddings_unnormalize.npz
@@ -69,8 +73,17 @@ PythonProject/
 ├── codenames_results.csv
 ├── RESULTS.md
 └── README.md
+```
 
 ## Files
+
+### embeddings/build_embeddings.py
+
+Builds the real (SUBTLEX-PL based) word embeddings: `builtin_embeddings.npz` / `builtin_embeddings_unnormalize.npz` (524 words) and `polish_embeddings.npz` / `polish_embeddings_unnormalize.npz` (10,000 most frequent nouns). Requires `subtlex-pl.csv` in the same folder (see [SUBTLEX-PL file](#subtlex-pl-file)).
+
+### embeddings/build_random_embeddings.py
+
+Generates the random baseline embeddings (`random_524*.npz`, `random_10000*.npz`) with the same word counts as the real ones, so they can be directly compared.
 
 ### codenames_simulation.py
 
@@ -139,9 +152,9 @@ This file is currently in progress.
 
 ### embeddings/
 
-Directory containing .npz embedding files used by the simulation.
+Directory containing `subtlex-pl.csv`, the scripts that build the embeddings, and the resulting `.npz` embedding files used by the simulation.
 
-Expected files:
+Expected `.npz` files:
 
 - builtin_embeddings.npz
 - polish_embeddings.npz
@@ -179,8 +192,10 @@ The simulation supports two normalization modes:
 
 | Mode | Description |
 |---|---|
-| normalized | uses normalized embedding files |
-| unnormalized | uses unnormalized embedding files |
+| normalized | uses normalized (unit-length) embedding files |
+| unnormalized | uses the model's raw-magnitude embedding files |
+
+**Note:** normalization mode interacts with the similarity metric — see the correction below.
 
 ## Similarity metrics
 
@@ -188,8 +203,17 @@ Two similarity modes are available:
 
 | Metric | Description |
 |---|---|
-| cosine | ranks words using cosine similarity |
+| cosine | ranks words by the dot product of their vectors |
 | euclidean | ranks words using Euclidean distance, where smaller distance means higher similarity |
+
+### Correction: "cosine" only behaves as true cosine similarity on normalized embeddings
+
+The `--metric cosine` option does **not** divide by vector norms — it always computes a plain dot product (`clue_vec @ board_vec`).
+
+- On **normalized** embeddings (unit-length vectors, the default), a dot product *is* mathematically equivalent to cosine similarity, since dividing by norms of 1 changes nothing. So in this case the label "cosine" is accurate.
+- On **unnormalized** embeddings (`--no-normalize`), the vectors don't have unit length, so the same dot-product computation is **not** cosine similarity — it's a raw dot product, which is also influenced by each vector's magnitude, not just its direction. Concretely, running `--metric cosine --no-normalize` gives the exact same ranking logic as running `--metric cosine` normally would give on already-normalized vectors — it is not recomputing anything metric-specific to the unnormalized case.
+
+In short: **`--metric cosine` combined with `--no-normalize` reports dot-product similarity, not cosine similarity.** Keep this in mind when comparing results across normalization modes in `codenames_results.csv` / `RESULTS.md` — the `metric=cosine, normalized=False` rows are a dot-product experiment, not a true cosine-similarity one.
 
 ## Installation
 
@@ -207,9 +231,26 @@ source .venv/bin/activate
 
 Install required packages:
 
-pip install numpy tqdm
+pip install numpy tqdm sentence-transformers
+
+## SUBTLEX-PL file
+
+The `subtlex-pl.csv` file is not included in the repository because it is too large for Git.
+
+Download the SUBTLEX-PL dataset from OSF: https://osf.io/5a76z/
+
+Then place the CSV file in the `embeddings/` folder and name it:
+
+```text
+embeddings/subtlex-pl.csv
+```
 
 ## Usage
+
+Build the embedding files first (from inside `embeddings/`, or point the scripts at that folder):
+
+python embeddings/build_embeddings.py
+python embeddings/build_random_embeddings.py
 
 Run the default simulation:
 
@@ -234,7 +275,7 @@ python stats/compute_centroid_stats.py
 | Argument | Values | Description |
 |---|---|---|
 | --embeddings | real, random | Selects embedding source |
-| --metric | cosine, euclidean | Selects similarity metric |
+| --metric | cosine, euclidean | Selects similarity metric (see note on cosine above) |
 | --play-set | small, large | Selects word set used to draw the board |
 | --general-set | small, large | Selects word set used as clue candidates |
 | --trials | integer | Number of simulated games |
@@ -271,7 +312,7 @@ Column meanings:
 |---|---|
 | play_set | word set used to draw the board |
 | general_set | word set used as possible clue words |
-| metric | similarity metric |
+| metric | similarity metric (see cosine/dot-product note above) |
 | normalized | whether normalized embeddings were used |
 | embeddings | embedding type: real or random |
 | n_trials | number of simulated games |
@@ -302,7 +343,7 @@ The planned analysis includes:
 
 - comparison of real and random embeddings,
 - comparison of cosine similarity and Euclidean distance,
-- comparison of normalized and unnormalized embeddings,
+- comparison of normalized and unnormalized embeddings (keeping in mind that "cosine" on unnormalized vectors is really a dot-product comparison, per the note above),
 - comparison of small and large vocabulary configurations,
 - interpretation of the simulation result distributions.
 
@@ -312,10 +353,11 @@ Main dependencies:
 
 - numpy
 - tqdm
+- sentence-transformers (only needed to build the real embeddings)
 
 Python version:
 
-Python 3.14+
+Python 3.10+ (uses `X | None` type hints; 3.14 also works)
 
 ## Notes
 

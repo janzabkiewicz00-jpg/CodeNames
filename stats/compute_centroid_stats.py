@@ -14,10 +14,16 @@ Results are written to a CSV file rather than printed to the console.
 Requirements:
     pip install numpy
 
+Note: this script lives in stats/. Its default embeddings/... and output
+paths are resolved relative to the script's own location (not the current
+working directory), so it works whether you run it as
+`python stats/compute_centroid_stats.py` from the project root or as
+`python compute_centroid_stats.py` from inside stats/.
+
 Usage:
     python stats/compute_centroid_stats.py
-    python stats/compute_centroid_stats.py --output stats/my_results.csv
-    python stats/compute_centroid_stats.py --files polish_embeddings.npz builtin_embeddings.npz
+    python stats/compute_centroid_stats.py --output my_results.csv
+    python stats/compute_centroid_stats.py --files a.npz b.npz c.npz
 """
 import argparse
 import csv
@@ -25,37 +31,29 @@ from pathlib import Path
 
 import numpy as np
 
-PROJECT_ROOT = Path(__file__).resolve().parent.parent
+SCRIPT_DIR = Path(__file__).resolve().parent
+PROJECT_ROOT = SCRIPT_DIR.parent
 EMBEDDINGS_DIR = PROJECT_ROOT / "embeddings"
-DEFAULT_OUTPUT = Path(__file__).resolve().parent / "centroid_stats.csv"
 
 DEFAULT_FILES = [
-    "polish_embeddings.npz",
-    "builtin_embeddings.npz",
-    "polish_embeddings_unnormalize.npz",
-    "builtin_embeddings_unnormalize.npz",
-    "random_10000.npz",
-    "random_524.npz",
-    "random_10000_unnormalized.npz",
-    "random_524_unnormalized.npz",
+    str(EMBEDDINGS_DIR / "polish_embeddings.npz"),
+    str(EMBEDDINGS_DIR / "builtin_embeddings.npz"),
+    str(EMBEDDINGS_DIR / "polish_embeddings_unnormalize.npz"),
+    str(EMBEDDINGS_DIR / "builtin_embeddings_unnormalize.npz"),
+    str(EMBEDDINGS_DIR / "random_10000.npz"),
+    str(EMBEDDINGS_DIR / "random_524.npz"),
+    str(EMBEDDINGS_DIR / "random_10000_unnormalized.npz"),
+    str(EMBEDDINGS_DIR / "random_524_unnormalized.npz"),
 ]
-
-
-def resolve_embedding_path(path: str | Path) -> Path:
-    path = Path(path)
-    if path.is_absolute():
-        return path
-    if path.parts and path.parts[0] == EMBEDDINGS_DIR.name:
-        return PROJECT_ROOT / path
-    return EMBEDDINGS_DIR / path
+DEFAULT_OUTPUT = str(SCRIPT_DIR / "centroid_stats.csv")
 
 
 class CentroidStats:
     """Loads an embeddings .npz file and computes centroid-distance stats."""
 
-    def __init__(self, data_path: str | Path):
-        self.data_path = resolve_embedding_path(data_path)
-        data = np.load(self.data_path, allow_pickle=True)
+    def __init__(self, data_path: str):
+        self.data_path = data_path
+        data = np.load(data_path, allow_pickle=True)
         self.embeddings = data["embeddings"]
         self.centroid = self.embeddings.mean(axis=0)
 
@@ -82,10 +80,9 @@ class CentroidStats:
 def compute_all(file_paths: list) -> list:
     results = []
     for path in file_paths:
-        resolved_path = resolve_embedding_path(path)
-        stats = CentroidStats(resolved_path)
+        stats = CentroidStats(path)
         results.append({
-            "file": str(resolved_path.relative_to(PROJECT_ROOT)),
+            "file": path,
             "n_words": stats.embeddings.shape[0],
             "mean_euclidean_distance": stats.mean_euclidean_distance(),
             "std_euclidean_distance": stats.std_euclidean_distance(),
@@ -95,13 +92,7 @@ def compute_all(file_paths: list) -> list:
     return results
 
 
-def save_results(results: list, output_path: str | Path) -> None:
-    output_path = Path(output_path)
-    if not output_path.is_absolute():
-        output_path = PROJECT_ROOT / output_path
-
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-
+def save_results(results: list, output_path: str) -> None:
     fieldnames = [
         "file", "n_words",
         "mean_euclidean_distance", "std_euclidean_distance",
@@ -116,17 +107,17 @@ def save_results(results: list, output_path: str | Path) -> None:
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Computes mean distance-to-centroid stats for embedding files "
-                    "and saves them to a CSV file.",
+                     "and saves them to a CSV file.",
     )
     parser.add_argument("--files", nargs="+", default=DEFAULT_FILES,
-                        help="Embedding .npz files to process. Relative paths are resolved inside embeddings/")
+                         help="Embedding .npz files to process")
     parser.add_argument("--output", default=DEFAULT_OUTPUT,
-                        help=f"Output CSV path, default: {DEFAULT_OUTPUT}")
+                         help=f"Output CSV path, default: {DEFAULT_OUTPUT}")
     args = parser.parse_args()
 
     results = compute_all(args.files)
     save_results(results, args.output)
-    print(f"✓ Saved results for {len(results)} files to '{args.output}'")
+    print(f"\u2713 Saved results for {len(results)} files to '{args.output}'")
 
 
 if __name__ == "__main__":

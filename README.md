@@ -245,6 +245,18 @@ Then place the CSV file in the `embeddings/` folder and name it:
 embeddings/subtlex-pl.csv
 ```
 
+## SUBTLEX-PL file
+
+The `subtlex-pl.csv` file is not included in the repository because it is too large for Git.
+
+Download the SUBTLEX-PL dataset from OSF: https://osf.io/5a76z/
+
+Then place the CSV file in the `embeddings/` folder and name it:
+
+```text
+embeddings/subtlex-pl.csv
+```
+
 ## Usage
 
 Build the embedding files first (from inside `embeddings/`, or point the scripts at that folder):

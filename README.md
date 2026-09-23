@@ -46,6 +46,7 @@ The algorithm evaluates all available clue words and keeps the best score found 
 - CSV result caching.
 - Batch execution of multiple experiment configurations.
 - Basic centroid statistics for embedding files.
+- Bootstrap test for whether the small word set is a representative random sample of the large vocabulary.
 
 ## Project structure
 
@@ -66,11 +67,14 @@ PythonProject/
 │
 ├── stats/
 │   ├── compute_centroid_stats.py
-│   └── centroid_stats.csv
+│   ├── centroid_stats.csv
+│   ├── test_representativeness.py
+│   └── representativeness_results.csv
 │
 ├── codenames_simulation.py
 ├── run_all_configs.py
 ├── codenames_results.csv
+├── results_summary.xlsx
 ├── RESULTS.md
 └── README.md
 ```
@@ -132,6 +136,22 @@ The output is saved to:
 
 stats/centroid_stats.csv
 
+### stats/test_representativeness.py
+
+Bootstrap test that checks whether the small (builtin, 524-word) vocabulary is a representative random sample of the large (10,000-word) vocabulary, or whether it occupies a distinct, more compact region of the embedding space -- e.g. because basic, everyday nouns tend to be semantically closer to each other than a random selection of words would be.
+
+For each of two statistics -- **compactness** (how tightly clustered the set's vectors are) and **centroid shift** (how far the set's centroid is from the centroid of the full vocabulary) -- the script:
+
+1. computes the statistic for the real small-vocabulary embeddings,
+2. draws many random subsamples of the same size from the large vocabulary and computes the same statistic for each, building a null distribution,
+3. reports an empirical p-value: how extreme the real value is compared to that null distribution.
+
+A small p-value supports the idea that the small word set is *not* just a random sample of the large one.
+
+The output is saved to:
+
+stats/representativeness_results.csv
+
 ### codenames_results.csv
 
 CSV file containing simulation results.
@@ -143,6 +163,10 @@ The file is used both as an output file and as a cache.
 ### stats/centroid_stats.csv
 
 CSV file containing centroid statistics for embedding files.
+
+### stats/representativeness_results.csv
+
+CSV file containing the bootstrap test results from `stats/test_representativeness.py` (observed statistics, null-distribution mean/std, and p-values for compactness and centroid shift).
 
 ### RESULTS.md
 
@@ -171,6 +195,12 @@ Each .npz file is expected to contain:
 - embeddings
 
 where words is an array of words and embeddings is the corresponding matrix of word vectors.
+
+### results_summary.xlsx
+
+A curated spreadsheet (exported from Google Sheets) summarizing and visualizing the results in `codenames_results.csv`, `stats/centroid_stats.csv` and `stats/representativeness_results.csv` -- pivot tables, charts, and derived statistics (mean, standard deviation, skewness, kurtosis) for each configuration.
+
+This file is a manually maintained report, not something any script regenerates automatically. It's updated occasionally as the analysis develops, not on every simulation run, to avoid bloating the git history with binary diffs.
 
 ## Embedding configurations
 
@@ -245,18 +275,6 @@ Then place the CSV file in the `embeddings/` folder and name it:
 embeddings/subtlex-pl.csv
 ```
 
-## SUBTLEX-PL file
-
-The `subtlex-pl.csv` file is not included in the repository because it is too large for Git.
-
-Download the SUBTLEX-PL dataset from OSF: https://osf.io/5a76z/
-
-Then place the CSV file in the `embeddings/` folder and name it:
-
-```text
-embeddings/subtlex-pl.csv
-```
-
 ## Usage
 
 Build the embedding files first (from inside `embeddings/`, or point the scripts at that folder):
@@ -279,6 +297,10 @@ python run_all_configs.py
 Compute centroid statistics:
 
 python stats/compute_centroid_stats.py
+
+Test whether the small word set is representative of the large vocabulary:
+
+python stats/test_representativeness.py
 
 ## Command-line arguments
 
@@ -307,6 +329,16 @@ python stats/compute_centroid_stats.py
 |---|---|---|
 | --files | list of .npz files | Embedding files to process |
 | --output | CSV path | Output path for centroid statistics |
+
+### stats/test_representativeness.py
+
+| Argument | Values | Description |
+|---|---|---|
+| --small | .npz path | Small (builtin) embeddings file |
+| --large | .npz path | Large (polish) embeddings file |
+| --bootstrap | integer | Number of random subsamples to draw (default: 2000) |
+| --seed | integer | Random seed, for reproducible output |
+| --output | CSV path | Output path for the bootstrap test results |
 
 ## Output format
 
@@ -344,6 +376,10 @@ A configuration is identified by:
 - normalized
 - embeddings
 - n_trials
+
+## Reports
+
+`results_summary.xlsx` is a Google Sheets export summarizing the various CSV outputs (`codenames_results.csv`, `stats/centroid_stats.csv`, `stats/representativeness_results.csv`) in a more readable form, with pivot tables and charts. It's committed to the repo as a convenience for anyone browsing the project, but it's a manually curated snapshot rather than a build artifact -- it isn't regenerated by any script here, and it isn't updated on every experiment run, since binary files don't diff cleanly in git and frequent updates would bloat the repository history. The CSV files remain the actual source of truth.
 
 ## Results and analysis
 

@@ -1,2 +1,2 @@
 small_file,large_file,sample_size,n_bootstrap,observed_compactness,null_compactness_mean,null_compactness_std,p_value_compactness,observed_centroid_shift,null_shift_mean,null_shift_std,p_value_shift
-/Users/janzabkiewicz/PycharmProjects/CodeNames/embeddings/builtin_embeddings.npz,/Users/janzabkiewicz/PycharmProjects/CodeNames/embeddings/polish_embeddings.npz,524,2000,0.6459682486250312,0.6882247027491003,0.006946777277723379,1.0,0.08480724550672587,0.030772104444592066,0.0027521144011886807,0.0
+embeddings/builtin_embeddings.npz,embeddings/polish_embeddings.npz,524,2000,0.6459682486250312,0.6878711685976471,0.006969955258477267,1.0,0.08480724550672587,0.03075501814115345,0.0026542660485169133,0.0

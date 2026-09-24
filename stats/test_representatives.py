@@ -110,6 +110,17 @@ def empirical_p_value(observed: float, null_distribution: np.ndarray) -> float:
     return float(np.mean(null_distribution >= observed))
 
 
+def display_path(path: str) -> str:
+    """Returns a path relative to the project root when possible, so the
+    CSV stays portable across machines instead of recording an absolute,
+    user-specific path."""
+    resolved = Path(path).resolve()
+    try:
+        return str(resolved.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return path
+
+
 def main() -> None:
     parser = argparse.ArgumentParser(
         description="Bootstrap test for whether the small (builtin) word set "
@@ -141,8 +152,8 @@ def main() -> None:
     p_shift = empirical_p_value(observed_shift, shift_null)
 
     result = {
-        "small_file": args.small,
-        "large_file": args.large,
+        "small_file": display_path(args.small),
+        "large_file": display_path(args.large),
         "sample_size": sample_size,
         "n_bootstrap": args.bootstrap,
         "observed_compactness": observed_compactness,

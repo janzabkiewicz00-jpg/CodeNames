@@ -77,12 +77,23 @@ class CentroidStats:
         return float(self.cosine_similarities().std())
 
 
+def display_path(path: str) -> str:
+    """Returns a path relative to the project root when possible, so the
+    CSV stays portable across machines instead of recording an absolute,
+    user-specific path."""
+    resolved = Path(path).resolve()
+    try:
+        return str(resolved.relative_to(PROJECT_ROOT))
+    except ValueError:
+        return path
+
+
 def compute_all(file_paths: list) -> list:
     results = []
     for path in file_paths:
         stats = CentroidStats(path)
         results.append({
-            "file": path,
+            "file": display_path(path),
             "n_words": stats.embeddings.shape[0],
             "mean_euclidean_distance": stats.mean_euclidean_distance(),
             "std_euclidean_distance": stats.std_euclidean_distance(),

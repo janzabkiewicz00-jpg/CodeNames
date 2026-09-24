@@ -9,6 +9,13 @@ shell around the centroid vs. a mix of near-centroid and outlier words).
 Used to compare the real word embeddings against the random baseline
 embeddings.
 
+Note: "cosine similarity" here is computed differently depending on the
+input file. On already-normalized (unit-vector) embeddings it is true
+cosine similarity (the centroid is normalized to make this exact). On
+unnormalized embeddings it is a plain dot product with the raw centroid
+instead, not true cosine similarity -- see
+CentroidStats.cosine_similarities() for details.
+
 Results are written to a CSV file rather than printed to the console.
 
 Requirements:
@@ -56,13 +63,31 @@ class CentroidStats:
         data = np.load(data_path, allow_pickle=True)
         self.embeddings = data["embeddings"]
         self.centroid = self.embeddings.mean(axis=0)
+        self.is_normalized = self._detect_normalized()
+
+    def _detect_normalized(self) -> bool:
+        """Detects whether the input vectors are unit-normalized by
+        checking their actual norms, rather than trusting the filename."""
+        norms = np.linalg.norm(self.embeddings, axis=1)
+        return bool(np.allclose(norms, 1.0, atol=1e-3))
 
     def euclidean_distances(self) -> np.ndarray:
         return np.linalg.norm(self.embeddings - self.centroid, axis=1)
 
     def cosine_similarities(self) -> np.ndarray:
-        centroid_norm = self.centroid / np.linalg.norm(self.centroid)
-        return self.embeddings @ centroid_norm
+        """True cosine similarity when the input vectors are already
+        unit-normalized: since ||v_i|| = 1, dividing only the centroid by
+        its norm is exactly what the cosine similarity formula requires.
+
+        On unnormalized vectors this is a plain dot product with the raw
+        centroid instead -- no vector is divided by its norm, matching the
+        "cosine" convention used in codenames_simulation.py -- since
+        normalizing only the centroid there would not be true cosine
+        similarity anyway (see the README for details)."""
+        if self.is_normalized:
+            centroid_direction = self.centroid / np.linalg.norm(self.centroid)
+            return self.embeddings @ centroid_direction
+        return self.embeddings @ self.centroid
 
     def mean_euclidean_distance(self) -> float:
         return float(self.euclidean_distances().mean())

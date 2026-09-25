@@ -1,422 +1,98 @@
 # Codenames Spymaster Simulation
 
-A Python project that simulates a simplified version of the board game Codenames / Tajniacy using word embeddings.
+A Python experiment about choosing a clue in a simplified game of **Codenames (Tajniacy)**. It uses Polish word embeddings to rank words on a board and measures how many target words can be reached before the first non-target. Additional experiments investigate metrics, vector norms, vocabulary size, dimensionality, and hubness.
 
-The project tests an embedding-based clue selection strategy. For a randomly generated board, the program searches for a clue word such that as many of the nearest board words as possible are correct target words before the first wrong word appears.
+## Simulation
 
-## Project overview
+Each trial samples 25 distinct board words, marks 8 as targets, and treats the remaining 17 as non-targets. For every candidate clue, the program ranks board words by vector similarity. The clue scores the number of consecutive targets before the first non-target. The trial records the **best score across all candidate clues**. For example, `target, target, non-target, target` scores **2**. Repeated trials produce a histogram of scores 0â8.
 
-In each simulation trial:
+This measures the best available *single* clue under the vector-ranking rule. It does not simulate other teams, an assassin, multiple turns, or human interpretation. The code does not enforce clue legality or exclude a clue that is itself on the board. The resulting score is therefore optimistic for this specific task.
 
-1. A board of 25 words is randomly sampled.
-2. 8 words are selected as correct target words.
-3. The remaining 17 words are treated as wrong words.
-4. The program searches through a vocabulary of possible clue words.
-5. For each clue word, board words are ranked by similarity to that clue.
-6. The clue receives a score equal to the number of correct words that appear before the first wrong word.
-7. The best clue score for the trial is saved.
+| Setting | Choices |
+| --- | --- |
+| Board (`--play-set`) and clue (`--general-set`) vocabularies | `small`: 524 built-in Polish words; `large`: 10,000 nouns drawn from SUBTLEX-PL |
+| Embeddings | `real`: 384-dimensional vectors from `paraphrase-multilingual-MiniLM-L12-v2`; `random`: standard-normal vectors with placeholder labels |
+| Vector lengths | Unit-normalized files by default; raw model vectors or unscaled random vectors with `--no-normalize` |
+| Ranking | `euclidean`: increasing Euclidean distance; `cosine`: decreasing dot product |
 
-The simulation repeats this process many times and stores the aggregated results in a CSV file.
+**Metric naming:** `--metric cosine` calculates a plain dot product. This equals cosine similarity for normalized vectors; with `--no-normalize`, it is a raw, norm-sensitive dot product. Euclidean distance and cosine produce the same ranking on unit vectors (except possible numerical ties), since `||a-b||Â˛ = 2 - 2(aÂˇb)`.
 
-## Strategy definition
+The current random embedding builder samples the normalized and unnormalized files **independently**, so they are not two versions of the same random vector set. Comparisons between those files include random-sample variation. The paired experiments under `stats/` generate matched vectors where required.
 
-For a clue word c, all board words are sorted from most similar to least similar.
+## Quick start
 
-Example ranking:
+Use Python **3.10+** from the repository root. The eight required embedding files are already committed, so the basic simulation does not need the original dataset or model download.
 
-1. correct
-2. correct
-3. wrong
-4. correct
-5. ...
-
-In this example, the clue score is 2, because the first wrong word appears in position 3.
-
-The algorithm evaluates all available clue words and keeps the best score found in a given trial.
-
-## Features
-
-- Simplified Codenames board simulation.
-- Word embedding based clue selection.
-- Real embeddings and random baseline embeddings.
-- Cosine similarity and Euclidean distance.
-- Normalized and unnormalized embedding files.
-- Small and large vocabulary configurations.
-- Multiprocessing support.
-- CSV result caching.
-- Batch execution of multiple experiment configurations.
-- Basic centroid statistics for embedding files.
-- Bootstrap test for whether the small word set is a representative random sample of the large vocabulary.
-
-## Project structure
-
-```
-PythonProject/
-├── embeddings/
-│   ├── subtlex-pl.csv                        (not included, see below)
-│   ├── build_embeddings.py
-│   ├── build_random_embeddings.py
-│   ├── builtin_embeddings.npz
-│   ├── polish_embeddings.npz
-│   ├── builtin_embeddings_unnormalize.npz
-│   ├── polish_embeddings_unnormalize.npz
-│   ├── random_524.npz
-│   ├── random_10000.npz
-│   ├── random_524_unnormalized.npz
-│   └── random_10000_unnormalized.npz
-│
-├── stats/
-│   ├── compute_centroid_stats.py
-│   ├── centroid_stats.csv
-│   ├── test_representativeness.py
-│   └── representativeness_results.csv
-│
-├── codenames_simulation.py
-├── run_all_configs.py
-├── codenames_results.csv
-├── results_summary.xlsx
-├── RESULTS.md
-└── README.md
-```
-
-## Files
-
-### embeddings/build_embeddings.py
-
-Builds the real (SUBTLEX-PL based) word embeddings: `builtin_embeddings.npz` / `builtin_embeddings_unnormalize.npz` (524 words) and `polish_embeddings.npz` / `polish_embeddings_unnormalize.npz` (10,000 most frequent nouns). Requires `subtlex-pl.csv` in the same folder (see [SUBTLEX-PL file](#subtlex-pl-file)).
-
-### embeddings/build_random_embeddings.py
-
-Generates the random baseline embeddings (`random_524*.npz`, `random_10000*.npz`) with the same word counts as the real ones, so they can be directly compared.
-
-### codenames_simulation.py
-
-Main simulation script.
-
-Responsible for:
-
-- loading selected embedding files,
-- drawing random boards,
-- assigning correct and wrong words,
-- computing clue scores,
-- selecting the best clue score for each trial,
-- running multiple simulation trials,
-- saving results to codenames_results.csv,
-- reading cached results when the same configuration was already computed.
-
-### run_all_configs.py
-
-Batch runner for predefined simulation configurations.
-
-It runs combinations of:
-
-- normalized in {True, False}
-- embeddings in {real, random}
-- metric in {cosine, euclidean}
-- (play_set, general_set) in {(small, small), (large, large), (small, large)}
-
-This gives 24 configurations in total:
-
-2 normalization modes × 2 embedding types × 2 metrics × 3 set combinations
-
-The script uses the caching mechanism from codenames_simulation.py, so already computed configurations are skipped.
-
-### stats/compute_centroid_stats.py
-
-Script for computing centroid-based statistics for embedding files.
-
-It calculates:
-
-- mean Euclidean distance from the centroid,
-- standard deviation of Euclidean distance from the centroid,
-- mean cosine similarity to the centroid,
-- standard deviation of cosine similarity to the centroid.
-
-The output is saved to:
-
-stats/centroid_stats.csv
-
-### stats/test_representativeness.py
-
-Bootstrap test that checks whether the small (builtin, 524-word) vocabulary is a representative random sample of the large (10,000-word) vocabulary, or whether it occupies a distinct, more compact region of the embedding space -- e.g. because basic, everyday nouns tend to be semantically closer to each other than a random selection of words would be.
-
-For each of two statistics -- **compactness** (how tightly clustered the set's vectors are) and **centroid shift** (how far the set's centroid is from the centroid of the full vocabulary) -- the script:
-
-1. computes the statistic for the real small-vocabulary embeddings,
-2. draws many random subsamples of the same size from the large vocabulary and computes the same statistic for each, building a null distribution,
-3. reports an empirical p-value: how extreme the real value is compared to that null distribution.
-
-A small p-value supports the idea that the small word set is *not* just a random sample of the large one.
-
-The output is saved to:
-
-stats/representativeness_results.csv
-
-### codenames_results.csv
-
-CSV file containing simulation results.
-
-Each row corresponds to one simulation configuration.
-
-The file is used both as an output file and as a cache.
-
-### stats/centroid_stats.csv
-
-CSV file containing centroid statistics for embedding files.
-
-### stats/representativeness_results.csv
-
-CSV file containing the bootstrap test results from `stats/test_representativeness.py` (observed statistics, null-distribution mean/std, and p-values for compactness and centroid shift).
-
-### RESULTS.md
-
-File intended for experiment results, analysis and conclusions.
-
-This file is currently in progress.
-
-### embeddings/
-
-Directory containing `subtlex-pl.csv`, the scripts that build the embeddings, and the resulting `.npz` embedding files used by the simulation.
-
-Expected `.npz` files:
-
-- builtin_embeddings.npz
-- polish_embeddings.npz
-- builtin_embeddings_unnormalize.npz
-- polish_embeddings_unnormalize.npz
-- random_524.npz
-- random_10000.npz
-- random_524_unnormalized.npz
-- random_10000_unnormalized.npz
-
-Each .npz file is expected to contain:
-
-- words
-- embeddings
-
-where words is an array of words and embeddings is the corresponding matrix of word vectors.
-
-### results_summary.xlsx
-
-A curated spreadsheet (exported from Google Sheets) summarizing and visualizing the results in `codenames_results.csv`, `stats/centroid_stats.csv` and `stats/representativeness_results.csv` -- pivot tables, charts, and derived statistics (mean, standard deviation, skewness, kurtosis) for each configuration.
-
-This file is a manually maintained report, not something any script regenerates automatically. It's updated occasionally as the analysis develops, not on every simulation run, to avoid bloating the git history with binary diffs.
-
-## Embedding configurations
-
-The simulation supports two vocabulary sizes:
-
-| Name | Description |
-|---|---|
-| small | smaller word set |
-| large | larger word set |
-
-The simulation supports two embedding sources:
-
-| Name | Description |
-|---|---|
-| real | real word embeddings |
-| random | randomly generated baseline embeddings |
-
-The simulation supports two normalization modes:
-
-| Mode | Description |
-|---|---|
-| normalized | uses normalized (unit-length) embedding files |
-| unnormalized | uses the model's raw-magnitude embedding files |
-
-**Note:** normalization mode interacts with the similarity metric — see the correction below.
-
-## Similarity metrics
-
-Two similarity modes are available:
-
-| Metric | Description |
-|---|---|
-| cosine | ranks words by the dot product of their vectors |
-| euclidean | ranks words using Euclidean distance, where smaller distance means higher similarity |
-
-### Correction: "cosine" only behaves as true cosine similarity on normalized embeddings
-
-The `--metric cosine` option does **not** divide by vector norms — it always computes a plain dot product (`clue_vec @ board_vec`).
-
-- On **normalized** embeddings (unit-length vectors, the default), a dot product *is* mathematically equivalent to cosine similarity, since dividing by norms of 1 changes nothing. So in this case the label "cosine" is accurate.
-- On **unnormalized** embeddings (`--no-normalize`), the vectors don't have unit length, so the same dot-product computation is **not** cosine similarity — it's a raw dot product, which is also influenced by each vector's magnitude, not just its direction. Concretely, running `--metric cosine --no-normalize` gives the exact same ranking logic as running `--metric cosine` normally would give on already-normalized vectors — it is not recomputing anything metric-specific to the unnormalized case.
-
-In short: **`--metric cosine` combined with `--no-normalize` reports dot-product similarity, not cosine similarity.** Keep this in mind when comparing results across normalization modes in `codenames_results.csv` / `RESULTS.md` — the `metric=cosine, normalized=False` rows are a dot-product experiment, not a true cosine-similarity one.
-
-## Installation
-
-Create a virtual environment:
-
+```bash
 python -m venv .venv
-
-Activate it on Windows:
-
-.venv\Scripts\activate
-
-Activate it on Linux/macOS:
-
-source .venv/bin/activate
-
-Install required packages:
-
-pip install numpy tqdm sentence-transformers
-
-## SUBTLEX-PL file
-
-The `subtlex-pl.csv` file is not included in the repository because it is too large for Git.
-
-Download the SUBTLEX-PL dataset from OSF: https://osf.io/5a76z/
-
-Then place the CSV file in the `embeddings/` folder and name it:
-
-```text
-embeddings/subtlex-pl.csv
+source .venv/bin/activate             # Windows PowerShell: .venv\Scripts\Activate.ps1
+python -m pip install numpy tqdm
+python codenames_simulation.py --embeddings real --metric cosine --play-set small --general-set large --trials 100 --workers 2
 ```
 
-## Usage
+The command prints nine counts: index `i` is the number of trials whose best clue scored `i`. Without arguments, the script runs 10,000 trials with a small board and clue vocabulary, random normalized vectors, Euclidean distance, and the multiprocessing pool's default worker count. Large clue vocabularies take longer to search.
 
-Build the embedding files first (from inside `embeddings/`, or point the scripts at that folder):
+```bash
+python run_all_configs.py --trials 100 --workers 2
+```
 
-python embeddings/build_embeddings.py
-python embeddings/build_random_embeddings.py
+The batch runner evaluates 24 configurations: two normalization modes Ă two embedding sources Ă two metrics Ă the vocabulary pairs `(small, small)`, `(large, large)`, and `(small, large)` (board, clue). Its default is **10,000 trials per configuration**; it accepts `--trials` and `--workers`.
 
-Run the default simulation:
+| Single-run option | Default | Values |
+| --- | --- | --- |
+| `--play-set` | `small` | `small`, `large` |
+| `--general-set` | `small` | `small`, `large` |
+| `--embeddings` | `random` | `real`, `random` |
+| `--metric` | `euclidean` | `cosine`, `euclidean` |
+| `--no-normalize` | off | Use the unnormalized embedding files |
+| `--trials` | `10000` | Number of boards |
+| `--workers` | Pool default | Number of processes |
 
-python codenames_simulation.py
+Run the main scripts from the repository root: their embedding paths and results CSV are relative to the current working directory.
 
-Run one simulation with selected parameters:
+## Files and experiments
 
-python codenames_simulation.py --embeddings real --metric cosine --play-set small --general-set large --trials 5000
+| Script | Purpose | Committed output |
+| --- | --- | --- |
+| [`codenames_simulation.py`](codenames_simulation.py) | Single-configuration histogram | [`codenames_results.csv`](codenames_results.csv) |
+| [`run_all_configs.py`](run_all_configs.py) | Predefined 24-configuration batch | [`codenames_results.csv`](codenames_results.csv) |
+| [`stats/compute_centroid_stats.py`](stats/compute_centroid_stats.py) | Distances and similarities to the embedding centroid | [`stats/centroid_stats.csv`](stats/centroid_stats.csv) |
+| [`stats/test_representatives.py`](stats/test_representatives.py) | Compare the small set's compactness and centroid shift against random subsets of the large set | [`stats/representativeness_results.csv`](stats/representativeness_results.csv) |
+| [`stats/compare_metrics_experiment.py`](stats/compare_metrics_experiment.py) | Paired synthetic-data trials: true cosine on unit vectors versus Euclidean on raw vectors, across vocabulary sizes and dimensions | [`stats/metric_comparison_results.csv`](stats/metric_comparison_results.csv) |
+| [`stats/run_dimension_sweep.py`](stats/run_dimension_sweep.py) | Fixed 10,000-word synthetic vocabulary; 10 dimensions and 10,000 trials per dimension | [`stats/dimension_sweep_results.csv`](stats/dimension_sweep_results.csv) |
+| [`stats/compare_vector_norms.py`](stats/compare_vector_norms.py) | Mean, standard deviation, and coefficient of variation of vector norms | [`stats/vector_norm_stats.csv`](stats/vector_norm_stats.csv) |
+| [`stats/measure_hubness.py`](stats/measure_hubness.py) | Counts of appearances among other words' top-`k` neighbors under cosine and raw dot product | [`stats/hubness_results.csv`](stats/hubness_results.csv) |
+| [`stats/hub_effect_analysis.py`](stats/hub_effect_analysis.py) | Scores grouped by whether hub words land among targets or non-targets | [`stats/hub_effect_results.csv`](stats/hub_effect_results.csv) |
+| [`stats/shuffle_norms_experiment.py`](stats/shuffle_norms_experiment.py) | Paired scores before and after permuting vector lengths among word directions | [`stats/shuffle_norms_results.csv`](stats/shuffle_norms_results.csv) |
 
-Run all predefined configurations:
+Examples (run from the repository root):
 
-python run_all_configs.py
+```bash
+python stats/test_representatives.py --bootstrap 2000 --seed 42
+python stats/compare_metrics_experiment.py --n 1000 --d 50 384 --trials 100 --seed 42
+python stats/measure_hubness.py --max-words 1000 --seed 42
+python stats/hub_effect_analysis.py --max-words 1000 --trials 100 --seed 42
+python stats/shuffle_norms_experiment.py --max-words 1000 --trials 100 --seed 42
+```
 
-Compute centroid statistics:
+Use `--output` to avoid changing committed results: most analysis scripts overwrite their default CSV; `compare_metrics_experiment.py` appends rows. The dimension sweep has its dimensions and trial count fixed in the source and is computationally expensive. The hubness analyses form full vocabulary-by-vocabulary similarity matrices with quadratic memory use; `--max-words` subsamples the vocabulary.
 
-python stats/compute_centroid_stats.py
+The committed main CSV has 24 runs of 10,000 trials. For the real, large-board/large-clue configuration, the recorded mean best-clue scores are **3.970** (normalized dot product), **3.982** (normalized Euclidean), **4.394** (raw dot product), and **3.395** (raw Euclidean). These are descriptive results for the simplified score above. [`results_summary.xlsx`](results_summary.xlsx) is a separately maintained workbook with charts, not an automatically generated script output. [`RESULTS.md`](RESULTS.md) is currently empty.
 
-Test whether the small word set is representative of the large vocabulary:
+### CSV cache
 
-python stats/test_representativeness.py
+The main scripts reuse a row in `codenames_results.csv` when board vocabulary, clue vocabulary, metric, normalization flag, embedding source, and trial count all match. A row contains those settings and `count_0` through `count_8`. **Embedding contents, code version, and random seed are not part of the cache key.** Move or delete an old row when rerunning after data or algorithm changes. Main simulation trials have no seed, and multiprocessing prevents straightforward exact replay. If the existing CSV has an incompatible header, the program moves it to `codenames_results.csv.bak`.
 
-## Command-line arguments
+## Rebuild embeddings (optional)
 
-### codenames_simulation.py
+To recreate the real embeddings, install `sentence-transformers`, obtain [SUBTLEX-PL from OSF](https://osf.io/5a76z/), and put its tab-separated frequency file at `embeddings/subtlex-pl.csv` (or specify `--subtlex`). The builder reads columns `all.pos` and `spelling`, selecting `.subst.` entries. The sentence-transformer model may download on first use.
 
-| Argument | Values | Description |
-|---|---|---|
-| --embeddings | real, random | Selects embedding source |
-| --metric | cosine, euclidean | Selects similarity metric (see note on cosine above) |
-| --play-set | small, large | Selects word set used to draw the board |
-| --general-set | small, large | Selects word set used as clue candidates |
-| --trials | integer | Number of simulated games |
-| --workers | integer | Number of worker processes |
-| --no-normalize | flag | Uses unnormalized embedding files |
+```bash
+python -m pip install sentence-transformers
+cd embeddings
+python Build_embeddings.py
+python build_random_embedings.py --seed 42
+cd ..
+```
 
-### run_all_configs.py
-
-| Argument | Values | Description |
-|---|---|---|
-| --trials | integer | Number of simulated games per configuration |
-| --workers | integer | Number of worker processes |
-
-### stats/compute_centroid_stats.py
-
-| Argument | Values | Description |
-|---|---|---|
-| --files | list of .npz files | Embedding files to process |
-| --output | CSV path | Output path for centroid statistics |
-
-### stats/test_representativeness.py
-
-| Argument | Values | Description |
-|---|---|---|
-| --small | .npz path | Small (builtin) embeddings file |
-| --large | .npz path | Large (polish) embeddings file |
-| --bootstrap | integer | Number of random subsamples to draw (default: 2000) |
-| --seed | integer | Random seed, for reproducible output |
-| --output | CSV path | Output path for the bootstrap test results |
-
-## Output format
-
-Simulation results are saved in:
-
-codenames_results.csv
-
-Columns:
-
-play_set,general_set,metric,normalized,embeddings,n_trials,count_0,count_1,count_2,count_3,count_4,count_5,count_6,count_7,count_8
-
-Column meanings:
-
-| Column | Description |
-|---|---|
-| play_set | word set used to draw the board |
-| general_set | word set used as possible clue words |
-| metric | similarity metric (see cosine/dot-product note above) |
-| normalized | whether normalized embeddings were used |
-| embeddings | embedding type: real or random |
-| n_trials | number of simulated games |
-| count_0 ... count_8 | number of trials where the best clue scored 0 ... 8 |
-
-## Result caching
-
-Before running a simulation, the program checks whether the same configuration is already present in codenames_results.csv.
-
-If the result exists, it is loaded from the CSV file instead of being recomputed.
-
-A configuration is identified by:
-
-- play_set
-- general_set
-- metric
-- normalized
-- embeddings
-- n_trials
-
-## Reports
-
-`results_summary.xlsx` is a Google Sheets export summarizing the various CSV outputs (`codenames_results.csv`, `stats/centroid_stats.csv`, `stats/representativeness_results.csv`) in a more readable form, with pivot tables and charts. It's committed to the repo as a convenience for anyone browsing the project, but it's a manually curated snapshot rather than a build artifact -- it isn't regenerated by any script here, and it isn't updated on every experiment run, since binary files don't diff cleanly in git and frequent updates would bloat the repository history. The CSV files remain the actual source of truth.
-
-## Results and analysis
-
-Detailed experiment results and conclusions are intended to be described in RESULTS.md.
-
-This file is currently in progress.
-
-The planned analysis includes:
-
-- comparison of real and random embeddings,
-- comparison of cosine similarity and Euclidean distance,
-- comparison of normalized and unnormalized embeddings (keeping in mind that "cosine" on unnormalized vectors is really a dot-product comparison, per the note above),
-- comparison of small and large vocabulary configurations,
-- interpretation of the simulation result distributions.
-
-## Requirements
-
-Main dependencies:
-
-- numpy
-- tqdm
-- sentence-transformers (only needed to build the real embeddings)
-
-Python version:
-
-Python 3.10+ (uses `X | None` type hints; 3.14 also works)
-
-## Notes
-
-This project implements a simplified simulation of Codenames.
-
-It does not include:
-
-- opponent words,
-- assassin word,
-- multi-turn gameplay,
-- human clue interpretation,
-- validation of clue legality.
-
-The simulation focuses on ranking board words by vector similarity to candidate clue words.
+The capitalization and spelling above match the **actual filenames**. Both builders write to the current directory; run them inside `embeddings/` to produce the paths expected by the simulator. The real builder also supports `--top`, `--words-file`, and `--output`; altering the word count or filename requires adjusting the hard-coded map in `codenames_simulation.py`. The random builder supports `--dim` and `--seed`. Each `.npz` file contains `words` and `embeddings` arrays; the loader uses `allow_pickle=True`, so load only trusted files.

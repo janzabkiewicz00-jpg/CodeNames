@@ -4,7 +4,7 @@ A Python experiment about choosing a clue in a simplified game of **Codenames (T
 
 ## Simulation
 
-Each trial samples 25 distinct board words, marks 8 as targets, and treats the remaining 17 as non-targets. For every candidate clue, the program ranks board words by vector similarity. The clue scores the number of consecutive targets before the first non-target. The trial records the **best score across all candidate clues**. For example, `target, target, non-target, target` scores **2**. Repeated trials produce a histogram of scores 0â8.
+Each trial samples 25 distinct board words, marks 8 as targets, and treats the remaining 17 as non-targets. For every candidate clue, the program ranks board words by vector similarity. The clue scores the number of consecutive targets before the first non-target. The trial records the **best score across all candidate clues**. For example, `target, target, non-target, target` scores **2**. Repeated trials produce a histogram of scores 0–8.
 
 This measures the best available *single* clue under the vector-ranking rule. It does not simulate other teams, an assassin, multiple turns, or human interpretation. The code does not enforce clue legality or exclude a clue that is itself on the board. The resulting score is therefore optimistic for this specific task.
 
@@ -15,7 +15,7 @@ This measures the best available *single* clue under the vector-ranking rule. It
 | Vector lengths | Unit-normalized files by default; raw model vectors or unscaled random vectors with `--no-normalize` |
 | Ranking | `euclidean`: increasing Euclidean distance; `cosine`: decreasing dot product |
 
-**Metric naming:** `--metric cosine` calculates a plain dot product. This equals cosine similarity for normalized vectors; with `--no-normalize`, it is a raw, norm-sensitive dot product. Euclidean distance and cosine produce the same ranking on unit vectors (except possible numerical ties), since `||a-b||Â˛ = 2 - 2(aÂˇb)`.
+**Metric naming:** `--metric cosine` calculates a plain dot product. This equals cosine similarity for normalized vectors; with `--no-normalize`, it is a raw, norm-sensitive dot product. Euclidean distance and cosine produce the same ranking on unit vectors (except possible numerical ties), since `||a-b||² = 2 - 2(a·b)`.
 
 The current random embedding builder samples the normalized and unnormalized files **independently**, so they are not two versions of the same random vector set. Comparisons between those files include random-sample variation. The paired experiments under `stats/` generate matched vectors where required.
 
@@ -36,7 +36,7 @@ The command prints nine counts: index `i` is the number of trials whose best clu
 python run_all_configs.py --trials 100 --workers 2
 ```
 
-The batch runner evaluates 24 configurations: two normalization modes Ă two embedding sources Ă two metrics Ă the vocabulary pairs `(small, small)`, `(large, large)`, and `(small, large)` (board, clue). Its default is **10,000 trials per configuration**; it accepts `--trials` and `--workers`.
+The batch runner evaluates 24 configurations: two normalization modes × two embedding sources × two metrics × the vocabulary pairs `(small, small)`, `(large, large)`, and `(small, large)` (board, clue). Its default is **10,000 trials per configuration**; it accepts `--trials` and `--workers`.
 
 | Single-run option | Default | Values |
 | --- | --- | --- |
@@ -64,6 +64,8 @@ Run the main scripts from the repository root: their embedding paths and results
 | [`stats/measure_hubness.py`](stats/measure_hubness.py) | Counts of appearances among other words' top-`k` neighbors under cosine and raw dot product | [`stats/hubness_results.csv`](stats/hubness_results.csv) |
 | [`stats/hub_effect_analysis.py`](stats/hub_effect_analysis.py) | Scores grouped by whether hub words land among targets or non-targets | [`stats/hub_effect_results.csv`](stats/hub_effect_results.csv) |
 | [`stats/shuffle_norms_experiment.py`](stats/shuffle_norms_experiment.py) | Paired scores before and after permuting vector lengths among word directions | [`stats/shuffle_norms_results.csv`](stats/shuffle_norms_results.csv) |
+| [`stats/analyze_norm_geometry.py`](stats/analyze_norm_geometry.py) | Correlation between vector norm and alignment with the unit-vector centroid; scale-independent dot-product alignment before and after norm shuffling | [`stats/norm_geometry_results.csv`](stats/norm_geometry_results.csv) |
+| [`stats/compare_norm_rankings.py`](stats/compare_norm_rankings.py) | Paired clue scores and numbers of distinct top-1 through top-5 board-word sets under cosine, original dot product, and two norm-shuffling controls | [`stats/norm_ranking_results.csv`](stats/norm_ranking_results.csv) |
 
 Examples (run from the repository root):
 
@@ -73,11 +75,17 @@ python stats/compare_metrics_experiment.py --n 1000 --d 50 384 --trials 100 --se
 python stats/measure_hubness.py --max-words 1000 --seed 42
 python stats/hub_effect_analysis.py --max-words 1000 --trials 100 --seed 42
 python stats/shuffle_norms_experiment.py --max-words 1000 --trials 100 --seed 42
+python stats/analyze_norm_geometry.py --seed 1024
+python stats/compare_norm_rankings.py --trials 1000 --seed 1024
 ```
+
+The two norm-geometry scripts use the committed raw 10,000-word real and random files by default, resolve paths relative to the repository, and write summary CSVs under `stats/`. Both accept `--files`, `--seed`, `--bins` (centroid-alignment quantile bins), and `--output`; the ranking script also accepts `--trials`. Its default 1,000-trial run searches all 10,000 clue candidates for each sampled board and can take some time. The original and shuffled variants use the same board and target assignment on every trial.
+
+In the geometry CSV, `norm_centroid_alignment_pearson` correlates vector length with cosine to the centroid of unit vectors. `dot_anisotropy` is the mean dot product between **different** vectors divided by the mean dot product of a vector with itself. This dimensionless index keeps norm effects; for the unit-vector reference it equals mean pairwise cosine. It measures global alignment, not nearest-neighbor hubness. The ranking CSV reports the score and how many **different unordered sets** can occupy the first `k` positions as the clue varies, averaged over boards for `k = 1,...,5`. These sets are not independent events.
 
 Use `--output` to avoid changing committed results: most analysis scripts overwrite their default CSV; `compare_metrics_experiment.py` appends rows. The dimension sweep has its dimensions and trial count fixed in the source and is computationally expensive. The hubness analyses form full vocabulary-by-vocabulary similarity matrices with quadratic memory use; `--max-words` subsamples the vocabulary.
 
-The committed main CSV has 24 runs of 10,000 trials. For the real, large-board/large-clue configuration, the recorded mean best-clue scores are **3.970** (normalized dot product), **3.982** (normalized Euclidean), **4.394** (raw dot product), and **3.395** (raw Euclidean). These are descriptive results for the simplified score above. [`results_summary.xlsx`](results_summary.xlsx) is a separately maintained workbook with charts, not an automatically generated script output. [`RESULTS.md`](RESULTS.md) is currently empty.
+The committed main CSV has 24 runs of 10,000 trials. For the real, large-board/large-clue configuration, the recorded mean best-clue scores are **3.970** (normalized dot product), **3.982** (normalized Euclidean), **4.394** (raw dot product), and **3.395** (raw Euclidean). These are descriptive results for the simplified score above. [`results_summary.xlsx`](results_summary.xlsx) is a separately maintained workbook with charts, not an automatically generated script output. See [`RESULTS.md`](RESULTS.md) for the analysis, including the new norm and ranking experiments.
 
 ### CSV cache
 

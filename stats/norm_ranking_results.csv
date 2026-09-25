@@ -1,0 +1,9 @@
+file,variant,n_words,n_trials,seed,centroid_bins,mean_score,std_score,mean_difference_vs_cosine,se_difference_vs_cosine,mean_distinct_top_1_sets,mean_distinct_top_2_sets,mean_distinct_top_3_sets,mean_distinct_top_4_sets,mean_distinct_top_5_sets
+embeddings/polish_embeddings_unnormalize.npz,cosine,10000,1000,1024,10,3.958,1.0140197236740516,0.0,0.0,25.0,169.711,401.86,626.66,811.858
+embeddings/polish_embeddings_unnormalize.npz,dot_original,10000,1000,1024,10,4.42,1.1329607230614835,0.462,0.05036956514695252,22.45,162.065,525.766,1066.539,1666.484
+embeddings/polish_embeddings_unnormalize.npz,dot_shuffled,10000,1000,1024,10,2.94,1.1909659944767526,-1.018,0.04189786905597267,19.222,61.98,125.491,203.927,290.665
+embeddings/polish_embeddings_unnormalize.npz,dot_within_centroid_bin,10000,1000,1024,10,4.363,1.0996503989905155,0.405,0.04941069131692469,22.237,158.353,509.685,1036.682,1626.471
+embeddings/random_10000_unnormalized.npz,cosine,10000,1000,1024,10,5.955,0.630059520997818,0.0,0.0,25.0,300.0,2247.832,6716.835,8995.204
+embeddings/random_10000_unnormalized.npz,dot_original,10000,1000,1024,10,5.96,0.632771680782255,0.005,0.008777929827245833,25.0,300.0,2243.311,6697.389,8987.983
+embeddings/random_10000_unnormalized.npz,dot_shuffled,10000,1000,1024,10,5.966,0.6346999291003583,0.011,0.008772454386085798,25.0,300.0,2243.486,6696.758,8987.98
+embeddings/random_10000_unnormalized.npz,dot_within_centroid_bin,10000,1000,1024,10,5.953,0.6346581757135096,-0.002,0.009059695253046764,25.0,300.0,2243.217,6696.985,8987.414

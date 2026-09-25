@@ -1,0 +1,12 @@
+file,variant,n_trials,mean_score,std_score
+embeddings/polish_embeddings_unnormalize.npz,cosine,5000,3.9826,1.00593103143307
+embeddings/polish_embeddings_unnormalize.npz,dot_original,5000,4.3946,1.1187898998471517
+embeddings/polish_embeddings_unnormalize.npz,dot_shuffled,5000,2.8898,1.2146011526422986
+embeddings/polish_embeddings_unnormalize.npz,euclidean_original,5000,3.3748,1.0211390502766997
+embeddings/polish_embeddings_unnormalize.npz,euclidean_shuffled,5000,3.537,1.0659413679935683
+embeddings/polish_embeddings_unnormalize.npz,dot_original_minus_cosine,5000,0.412,1.5760253805062912
+embeddings/polish_embeddings_unnormalize.npz,dot_shuffled_minus_cosine,5000,-1.0928,1.3083532244772433
+embeddings/polish_embeddings_unnormalize.npz,euclidean_original_minus_cosine,5000,-0.6078,0.6678167113811992
+embeddings/polish_embeddings_unnormalize.npz,euclidean_shuffled_minus_cosine,5000,-0.4456,0.9745976810971797
+embeddings/polish_embeddings_unnormalize.npz,dot_original_minus_dot_shuffled,5000,1.5048,1.6829667138716677
+embeddings/polish_embeddings_unnormalize.npz,euclidean_original_minus_euclidean_shuffled,5000,-0.1622,0.9746235991396883

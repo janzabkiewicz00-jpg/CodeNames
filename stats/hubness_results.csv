@@ -1,0 +1,9 @@
+file,n_words,k,metric,mean_Nk,std_Nk,max_Nk,skewness_Nk
+embeddings/builtin_embeddings_unnormalize.npz,524,10,cosine,10.0,15.563217548373963,132,4.317994704247609
+embeddings/builtin_embeddings_unnormalize.npz,524,10,dot,10.0,17.451131331029067,207,5.703587349046209
+embeddings/polish_embeddings_unnormalize.npz,10000,10,cosine,10.0,8.979699326814902,175,4.103489642572566
+embeddings/polish_embeddings_unnormalize.npz,10000,10,dot,10.0,63.09850235940628,3994,39.94885516668835
+embeddings/random_524_unnormalized.npz,524,10,cosine,10.0,3.157446064282803,20,0.1120373577378314
+embeddings/random_524_unnormalized.npz,524,10,dot,10.0,3.6846079680018327,24,0.3325919373480745
+embeddings/random_10000_unnormalized.npz,10000,10,cosine,10.0,3.15442546274278,24,0.3362644606970074
+embeddings/random_10000_unnormalized.npz,10000,10,dot,10.0,4.907647094076753,40,0.8293810135750945

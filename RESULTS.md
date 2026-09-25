@@ -11,16 +11,16 @@ The simulator ranks words using a dot product when the option is named `cosine`.
 For unit vectors, Euclidean distance and cosine similarity induce the same ranking:
 
 ```text
-||a - b||Â˛ = 2 - 2(a Âˇ b).
+||a - b||² = 2 - 2(a · b).
 ```
 
 Accordingly, normalized Euclidean distance adds no distinct ranking strategy. Its separately simulated rows have slightly different sample means because the runs draw different random boards. For example, in the large/large real case the recorded means are **3.9696** for cosine and **3.9815** for normalized Euclidean; in the random case they are **5.9489** and **5.9408**. The underlying ranking rule is mathematically equivalent on unit vectors. The rest of this report uses normalized cosine, raw dot product, and unnormalized Euclidean distance.
 
 ## Real embeddings versus random vectors
 
-Random vectors yield higher mean scores than real embeddings in every corresponding main configuration. The table shows the three metrics for each board/clue vocabulary pairing. Each number comes from a separate 10,000-trial run; `random â real` is the difference in means.
+Random vectors yield higher mean scores than real embeddings in every corresponding main configuration. The table shows the three metrics for each board/clue vocabulary pairing. Each number comes from a separate 10,000-trial run; `random − real` is the difference in means.
 
-| Board / clues | Metric | Real mean | Random mean | Random â real |
+| Board / clues | Metric | Real mean | Random mean | Random − real |
 | --- | --- | ---: | ---: | ---: |
 | small / small | cosine | 3.2051 | 4.4425 | 1.2374 |
 | small / small | dot product | 3.6612 | 4.4337 | 0.7725 |
@@ -40,9 +40,9 @@ The real embedding space is strongly **anisotropic**: many vectors point in broa
 
 | Metric | Real | Random |
 | --- | ---: | ---: |
-| Cosine | â0.0951 | â0.0140 |
-| Dot product | +0.1806 | â0.0020 |
-| Euclidean | â0.3188 | â0.0060 |
+| Cosine | −0.0951 | −0.0140 |
+| Dot product | +0.1806 | −0.0020 |
+| Euclidean | −0.3188 | −0.0060 |
 
 The random small and large files are generated **independently**, rather than one being a literal subset of the other. Both use the same standard-normal sampling rule, however: drawing 25 board vectors from either random vocabulary gives broadly similar geometry when both searches have 10,000 candidate clues. For real embeddings, the built-in list of 524 common words is hand-selected and differs from the 10,000 nouns selected from SUBTLEX-PL, so the board-word distribution can change in a systematic way. The direction of that change depends on the metric, as the table shows.
 
@@ -70,12 +70,12 @@ For real embeddings, the observed order is **dot product > cosine > unnormalized
 For a fixed candidate clue `a` and board word `b`, ordering by squared Euclidean distance is equivalent to ordering by
 
 ```text
-||a - b||Â˛ = ||a||Â˛ + ||b||Â˛ - 2(a Âˇ b).
+||a - b||² = ||a||² + ||b||² - 2(a · b).
 ```
 
-The `||a||Â˛` term is constant across the 25 board words and does not change their order. The board-word term `||b||Â˛` does change from word to word. In the random baseline, vector lengths are sampled without regard to which board words are targets; their variation perturbs the ranking without adding information about the assigned labels. In large/large, random cosine scores have standard deviation **0.6295**, versus **0.9639** for unnormalized Euclidean scores, alongside a fall in the mean from **5.9489** to **5.2386**. This is consistent with additional variation from the sampled board vectors and their lengths. Standard deviations alone cannot isolate length as the sole cause.
+The `||a||²` term is constant across the 25 board words and does not change their order. The board-word term `||b||²` does change from word to word. In the random baseline, vector lengths are sampled without regard to which board words are targets; their variation perturbs the ranking without adding information about the assigned labels. In large/large, random cosine scores have standard deviation **0.6295**, versus **0.9639** for unnormalized Euclidean scores, alongside a fall in the mean from **5.9489** to **5.2386**. This is consistent with additional variation from the sampled board vectors and their lengths. Standard deviations alone cannot isolate length as the sole cause.
 
-The paired synthetic-vector experiment in [metric_comparison_results.csv](stats/metric_comparison_results.csv) evaluates the same boards with cosine on normalized vectors and Euclidean distance on the corresponding raw vectors. At `n = 10,000`, `d = 384`, its mean **cosine minus Euclidean** score is **+0.722** over 1,000 paired trials. The [dimension sweep](stats/dimension_sweep_results.csv) shows that this is dimension-dependent: the paired difference is **â0.708** at `d = 2`, crosses zero between `d = 4` and `d = 5`, and reaches **+0.687** at `d = 300`. Thus âEuclidean is worstâ describes these high-dimensional runs, not a universal rule.
+The paired synthetic-vector experiment in [metric_comparison_results.csv](stats/metric_comparison_results.csv) evaluates the same boards with cosine on normalized vectors and Euclidean distance on the corresponding raw vectors. At `n = 10,000`, `d = 384`, its mean **cosine minus Euclidean** score is **+0.722** over 1,000 paired trials. The [dimension sweep](stats/dimension_sweep_results.csv) shows that this is dimension-dependent: the paired difference is **−0.708** at `d = 2`, crosses zero between `d = 4` and `d = 5`, and reaches **+0.687** at `d = 300`. Thus “Euclidean is worst” describes these high-dimensional runs, not a universal rule.
 
 Real large/large scores vary more across boards than random ones: standard deviations are **1.0057 versus 0.6295** for cosine and **1.1089 versus 0.6334** for dot product. Their nonuniform, anisotropic geometry is a plausible contributor: a board sampled from real embeddings can encounter quite different local arrangements, while the random vectors come from a more uniform sampling rule. The centroid statistics establish the strong geometric difference; they do not prove that it alone causes the observed score variance. For unnormalized Euclidean the standard deviations are **1.0264 versus 0.9639**, a smaller gap.
 
@@ -85,23 +85,23 @@ For a fixed clue vector `a` and board word vector `b`, the dot-product score is 
 
 ### Norms are tied to direction
 
-The new [norm geometry analysis](stats/norm_geometry_results.csv) defines a word's centroid alignment as the cosine of its unit vector with the centroid of all unit vectors. For the 10,000 real words, Pearson's correlation between **raw norm** and **centroid alignment** is **â0.878**. For the random vectors it is approximately **0.0005**. Real words pointing closer to the dominant direction tend to have shorter vectors; words pointing farther from it tend to have longer ones. The relative standard deviation of norms (CV) is also **0.250** for real versus **0.036** for random embeddings.
+The new [norm geometry analysis](stats/norm_geometry_results.csv) defines a word's centroid alignment as the cosine of its unit vector with the centroid of all unit vectors. For the 10,000 real words, Pearson's correlation between **raw norm** and **centroid alignment** is **−0.878**. For the random vectors it is approximately **0.0005**. Real words pointing closer to the dominant direction tend to have shorter vectors; words pointing farther from it tend to have longer ones. The relative standard deviation of norms (CV) is also **0.250** for real versus **0.036** for random embeddings.
 
 To measure alignment while retaining the effect of lengths, the same script computes a dimensionless *dot alignment index*:
 
 ```text
-A_dot = mean(v_i Âˇ v_j for i != j) / mean(v_i Âˇ v_i).
+A_dot = mean(v_i · v_j for i != j) / mean(v_i · v_i).
 ```
 
 For unit vectors this becomes the mean pairwise cosine; a value near zero means there is little average shared dot product between different vectors. It is a measure of **global alignment**, not a complete measure of all ranking behavior.
 
 | 10,000-word set | Norm/centroid correlation | Mean dot between different words | Mean self dot | Dot alignment index |
 | --- | ---: | ---: | ---: | ---: |
-| Real, original norms | â0.878 | 7.114 | 17.785 | **0.400** |
-| Real, norms shuffled globally | â0.001 | 7.909 | 17.785 | **0.445** |
-| Real, norms shuffled within centroid-alignment bins | â0.866 | 7.124 | 17.785 | **0.401** |
+| Real, original norms | −0.878 | 7.114 | 17.785 | **0.400** |
+| Real, norms shuffled globally | −0.001 | 7.909 | 17.785 | **0.445** |
+| Real, norms shuffled within centroid-alignment bins | −0.866 | 7.124 | 17.785 | **0.401** |
 | Real, unit vectors (cosine reference) | undefined | 0.473 | 1.000 | **0.473** |
-| Random, raw vectors | â 0 | â 0 | 383.636 | **â 0** |
+| Random, raw vectors | ≈ 0 | ≈ 0 | 383.636 | **≈ 0** |
 
 The original assignment of norms **reduces the real vectors' shared dot-product component** relative to both the unit-vector reference and a global norm shuffle. The index remains **0.400**, so the real vectors are still strongly aligned under dot product. Rescaling does not change their directions or the mean pairwise cosine. Nor does a lower dot alignment index imply that all forms of anisotropy or hubness decrease.
 
@@ -115,10 +115,10 @@ The new [paired ranking experiment](stats/norm_ranking_results.csv) repeats the 
 | --- | ---: | ---: | ---: | ---: |
 | Cosine | 3.958 | reference | 626.7 | 811.9 |
 | Original dot product | **4.420** | **+0.462 (0.050)** | **1,066.5** | **1,666.5** |
-| Dot product, globally shuffled norms | 2.940 | â1.018 (0.042) | 203.9 | 290.7 |
+| Dot product, globally shuffled norms | 2.940 | −1.018 (0.042) | 203.9 | 290.7 |
 | Dot product, shuffled within alignment bins | 4.363 | +0.405 (0.049) | 1,036.7 | 1,626.5 |
 
-A fixed group of four board words has only `C(8,4) / C(25,4) â 0.55%` chance of containing four targets under the random target assignment. Access to more different top-four groups gives the clue search more chances to find an all-target group. The groups overlap, so their count is **not** a count of independent opportunities and does not determine the score by itself.
+A fixed group of four board words has only `C(8,4) / C(25,4) ≈ 0.55%` chance of containing four targets under the random target assignment. Access to more different top-four groups gives the clue search more chances to find an all-target group. The groups overlap, so their count is **not** a count of independent opportunities and does not determine the score by itself.
 
 One plausible mechanism is that short, centrally aligned words are less likely to rank highly for *many* clues under dot product, while a longer peripheral word can rank highly when a clue points toward it. A central **wrong** word is then less apt to block all candidate clues, although a central **correct** word is downweighted as well. The paired results show the **net** change: original norms make substantially more four- and five-word groups attainable. With norms assigned to unrelated directions, the common component grows and attainable groups collapse. Shuffling within alignment bins retains most of the advantage. These interventions support the norm/direction association as an important factor; they do not prove it is the sole factor.
 
@@ -131,7 +131,7 @@ For the same *raw* random file, the paired experiment normalizes those vectors f
 | Cosine | 5.955 | reference | 6,716.8 |
 | Original dot product | 5.960 | +0.005 (0.009) | 6,697.4 |
 | Dot product, globally shuffled norms | 5.966 | +0.011 (0.009) | 6,696.8 |
-| Dot product, shuffled within alignment bins | 5.953 | â0.002 (0.009) | 6,697.0 |
+| Dot product, shuffled within alignment bins | 5.953 | −0.002 (0.009) | 6,697.0 |
 
 These small paired score differences are consistent with no meaningful improvement from the norm assignments in this random dataset.
 
